@@ -71,6 +71,11 @@ suppressPackageStartupMessages(library(StructuralVariantAnnotation))
 gr <- breakpointRanges(vcf)
 gr
 ```
+Some VCF callers support single breakends (see [VCF standard 5.9.2]), 
+```{r breakendRanges}
+all.gr <- breakendRanges(vcf)
+all.gr
+```
 
 
 ### Exploring breakpoints

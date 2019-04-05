@@ -16,7 +16,14 @@
 }
 
 #' Determines whether the variant is a symbolic allele
-#'
+#' @details The function takes a VCF object as input, and returns a logical
+#' value for each row, determining whether the variant is a symbolic allele.
+#' @param x A VCF object.
+#' @return A logical list of which the length is the same with the input object.
+#' @examples
+#' vcf.file <- system.file("extdata", "gridss.vcf", package = "StructuralVariantAnnotation")
+#' vcf <- VariantAnnotation::readVcf(vcf.file, "hg19")
+#' isSymbolic(vcf)
 #' @export
 setGeneric("isSymbolic", signature="x",
            function(x, ...)
@@ -38,8 +45,15 @@ setMethod("isSymbolic", "ExpandedVCF",
     return(result)
 }
 
-#' Determines whether the variant is a structural variant
-#'
+#' Determining whether the variant is a structural variant
+#' @details The function takes a VCF object as input, and returns a logical
+#' value for each row, determining whether the variant is a structural variant.
+#' @param x A VCF object.
+#' @return A logical list of which the length is the same with the input object.
+#' @examples
+#' vcf.file <- system.file("extdata", "gridss.vcf", package = "StructuralVariantAnnotation")
+#' vcf <- VariantAnnotation::readVcf(vcf.file, "hg19")
+#' isStructural(vcf)
 #' @export
 setGeneric("isStructural", signature="x",
            function(x, ...)
@@ -91,17 +105,38 @@ setMethod("isStructural", "VCF",
 )
 
 
-#' Extracts the structural variants as a BreakendGRanges
+#' Extracting the structural variants as a BreakendGRanges
 #'
 #' @details
 #' Structural variants are converted to breakend notation.
-#'
 #' Due to ambiguities in the VCF specifications, structural variants
 #' with multiple alt alleles are not supported.
-#'
+#' The CIPOS tag describes the uncertainty interval of the around the postition
+#' of the breakend. See Section 5.4.8 of
+#' \url{https://samtools.github.io/hts-specs/VCFv4.3.pdf} for details of CIPOS.
 #' If HOMLEN or HOMSEQ is defined without CIPOS, it is assumed that
 #' the variant position is left aligned.
-#'
+#' A breakend on the '+' strand indicates a break immediately after the given
+#' position, to the left of which is the DNA segment involved in the breakpoint.
+#' The '-' strand indicates a break immediately before the given position,
+#' rightwards of which is the DNA segment involved in the breakpoint.
+#' Unpaired variants are removed at this stage.
+#' @param x A VCF object
+#' @param nominalPosition Determines whether to call the variant at the
+#' nominal VCF position, or to call the confidence interval (incorporating
+#' any homology present). Default value is set to FALSE, where the interval is
+#' called based on the CIPOS tag. When set to TRUE, the ranges field contains
+#' the nomimal variant position only.
+#' @param placeholderName Variant name prefix to assign to unnamed variants.
+#' @param suffix The suffix to append to varaint names.
+#' @param info_columns VCF INFO columns to include in the GRanges object.
+#' @return A GRanges object of SVs.
+#' @examples
+#' vcf.file <- system.file("extdata", "vcf4.2.example.sv.vcf",
+#'                          package = "StructuralVariantAnnotation")
+#' vcf <- VariantAnnotation::readVcf(vcf.file, "hg19")
+#' breakpointRanges(vcf.file)
+#' breakpointRanges(vcf.file, nominalPosition=TRUE)
 #' @export
 setGeneric("breakpointRanges", signature="x",
 		   function(x, ...)
@@ -112,14 +147,17 @@ setMethod("breakpointRanges", "VCF",
 		  	.breakpointRanges(x, ...)
 )
 
-#' @param vcf VCF object
+#' Function for extracting the structural variants as a BreakendGRanges
+#' @param vcf a VCF object
 #' @param nominalPosition Determines whether to call the variant at the
 #'    nominal VCF position, or to call the confidence interval (incorporating
 #'    any homology present).
 #' @param prefix variant name prefix to assign to unnamed variants
 #' @param suffix suffix to append
 #' @param info_columns VCF INFO columns to include in the GRanges object
-.breakpointRanges <- function(vcf, nominalPosition=FALSE, placeholderName="svrecord", suffix="_bp", info_columns=NULL, unpartneredBreakends=FALSE) {
+.breakpointRanges <- function(vcf, nominalPosition=FALSE,
+							  placeholderName="svrecord", suffix="_bp",
+							  info_columns=NULL, unpartneredBreakends=FALSE) {
 	vcf <- vcf[isStructural(vcf),]
 	assertthat::assert_that(.hasSingleAllelePerRecord(vcf))
 	# VariantAnnotation bug: SV row names are not unique
@@ -470,8 +508,29 @@ setMethod("breakpointRanges", "VCF",
 }
 #' Extracts unpartnered breakend structural variants as a GRanges
 #'
-#' See Section 5.4.9 of https://samtools.github.io/hts-specs/VCFv4.3.pdf for details.
-#'
+#' @details
+#' The VCF standard supports single breakends where a breakend is not part of a
+#' novel adjacency and lacks a mate. This function supports parsing single
+#' breakends to GRanges, where a dot symbol is used in the ALT field to annotate
+#' the directional information. Single breakends provide insights to situations
+#' when one side of the structural variant is not observed, due to e.g. low
+#' mappability, non-reference contigs, complex multi-break operations, etc.
+#' See Section 5.4.9 of \url{https://samtools.github.io/hts-specs/VCFv4.3.pdf}
+#' for details of single breakends.
+#' @param x A VCF object.
+#' @param nominalPosition Determines whether to call the variant at the
+#' nominal VCF position, or to call the confidence interval. Default value is
+#' set to FALSE.
+#' @param placeholderName Variant name prefix to assign to unnamed variants.
+#' @param suffix The suffix to append to varaint names.
+#' @param info_columns VCF INFO columns to include in the GRanges object.
+#' @return A GRanges object of SVs.
+#' @examples
+#' vcf.file <- system.file("extdata", "gridss.vcf",
+#'                          package = "StructuralVariantAnnotation")
+#' vcf <- VariantAnnotation::readVcf(vcf.file, "hg19")
+#' breakendRanges(vcf.file)
+#' breakendRanges(vcf.file, nominalPosition=TRUE)
 #' @export
 setGeneric("breakendRanges", signature="x",
 		   function(x, ...)
@@ -482,15 +541,6 @@ setMethod("breakendRanges", "VCF",
 		  	.breakpointRanges(x, unpartneredBreakends=TRUE, ...)
 )
 
-#' @param vcf VCF object
-#' @param nominalPosition Determines whether to call the variant at the
-#'    nominal VCF position, or to call the confidence interval (incorporating
-#'    any homology present).
-#' @param prefix variant name prefix to assign to unnamed variants
-#' @param suffix suffix to append
-#' @param info_columns VCF INFO columns to include in the GRanges object
-.breakendRanges <- function(vcf, nominalPosition=FALSE, placeholderName="svrecord", suffix="_bp", info_columns=NULL) {
-}
 
 .hasMetadataInfo <- function(vcf, field) {
 	return(field %in% row.names(info(header(vcf))))

@@ -13,14 +13,14 @@
 #' @return A GRanges object in which each entry is the partner breakend of
 #' those in the input object.
 #' @examples
-#' #reading in a VCF file as \code{vcf}
+#' ##reading in a VCF file as \code{vcf}
 #' vcf.file <- system.file("extdata", "gridss.vcf", package = "StructuralVariantAnnotation")
-#' vcf <- VariantAnnotation::readVcf(vcf.file, "hg19") vcf.file <- system.file("extdata", "g
-#' #parsing \code{vcf} to GRanges object \code{gr}
+#' vcf <- VariantAnnotation::readVcf(vcf.file, "hg19")
+#' ##parsing \code{vcf} to GRanges object \code{gr}
 #' gr <- breakpointRanges(vcf)
-#' #output partner breakend of each breakend in \code{gr}
+#' ##output partner breakend of each breakend in \code{gr}
 #' partner(gr)
-#'@export
+#' @export
 partner <- function(gr) {
 	assertthat::assert_that(all(gr$partner %in% names(gr)))
 	return(gr[gr$partner,])
@@ -58,15 +58,15 @@ partner <- function(gr) {
 #' at maximum, half the event size. This ensures that small deletion do actually
 #' overlap at least one base pair.
 #' @examples
-#' #reading in VCF files
+#' ##reading in VCF files
 #' query.file <- system.file("extdata", "gridss-na12878.vcf", package = "StructuralVariantAnnotation")
 #' subject.file <- system.file("extdata", "gridss.vcf", package = "StructuralVariantAnnotation")
 #' query.vcf <- VariantAnnotation::readVcf(query.file, "hg19")
 #' subject.vcf <- VariantAnnotation::readVcf(subject.file, "hg19")
-#' #parsing vcfs to GRanges objects
+#' ##parsing vcfs to GRanges objects
 #' query.gr <- breakpointRanges(query.vcf)
 #' subject.gr <- breakpointRanges(subject.vcf)
-#' #find overlapping breakpoint intervals
+#' ##find overlapping breakpoint intervals
 #' findBreakpointOverlaps(query.gr, subject.gr)
 #' findBreakpointOverlaps(query.gr, subject.gr, ignore.strand=TRUE)
 #' findBreakpointOverlaps(query.gr, subject.gr, maxgap=100, minoverlap=10, sizemargin=0.5)
@@ -144,15 +144,15 @@ findBreakpointOverlaps <- function(query, subject, maxgap=-1L, minoverlap=0L,
 #' @param breakpointScoreColumn Query column defining a score for determining which query breakpoint
 #' is considered the best when countOnlyBest=TRUE.
 #' @examples
-#' #reading in VCF files
+#' ##reading in VCF files
 #' query.file <- system.file("extdata", "gridss-na12878.vcf", package = "StructuralVariantAnnotation")
 #' subject.file <- system.file("extdata", "gridss.vcf", package = "StructuralVariantAnnotation")
 #' query.vcf <- VariantAnnotation::readVcf(query.file, "hg19")
 #' subject.vcf <- VariantAnnotation::readVcf(subject.file, "hg19")
-#' #parsing vcfs to GRanges objects
+#' ##parsing vcfs to GRanges objects
 #' query.gr <- breakpointRanges(query.vcf)
 #' subject.gr <- breakpointRanges(subject.vcf)
-#' #count overlapping breakpoint intervals
+#' ##count overlapping breakpoint intervals
 #' countBreakpointOverlaps(query.gr, subject.gr)
 #' countBreakpointOverlaps(query.gr, subject.gr, maxgap=100)
 #' countBreakpointOverlaps(query.gr, subject.gr, maxgap=100, ignore.strand=TRUE, countOnlyBest=TRUE)
