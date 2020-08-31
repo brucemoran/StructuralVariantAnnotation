@@ -381,14 +381,14 @@ setMethod("breakpointRanges", "VCF",
 				stop(paste("Delly variants missing CT:", paste(names(cgr)[is.na(VariantAnnotation::info(cvcf)$CT)], collapse=", ")))
 			}
 			cgr$insLen <- VariantAnnotation::info(cvcf)$INSLEN %na% 0 # Delly no longer writes INSLEN to all TRA records
-			width(cgr) <- 1
+			BiocGenerics::width(cgr) <- 1
 			mategr <- cgr
 			# Hack so we can add new seqlevels if required
-			seqlevels(mategr) <- unique(c(seqlevels(mategr), VariantAnnotation::info(cvcf)$CHR2))
-			seqnames(mategr)[seq(1, length(mategr))] <- VariantAnnotation::info(cvcf)$CHR2
-			ranges(mategr) <- IRanges::IRanges(start=VariantAnnotation::info(cvcf)$END, width=1)
-			strand(cgr) <- ifelse(VariantAnnotation::info(cvcf)$CT %in% c("3to3", "3to5"), "+", "-")
-			strand(mategr) <- ifelse(VariantAnnotation::info(cvcf)$CT %in% c("3to3", "5to3"), "+", "-")
+			GenomeInfoDb::seqlevels(mategr) <- unique(c(GenomeInfoDb::seqlevels(mategr), VariantAnnotation::info(cvcf)$CHR2))
+			GenomeInfoDb::seqnames(mategr)[seq(1, length(mategr))] <- VariantAnnotation::info(cvcf)$CHR2
+			IRanges::ranges(mategr) <- IRanges::IRanges(start=VariantAnnotation::info(cvcf)$END, width=1)
+			BiocGenerics::strand(cgr) <- ifelse(VariantAnnotation::info(cvcf)$CT %in% c("3to3", "3to5"), "+", "-")
+			BiocGenerics::strand(mategr) <- ifelse(VariantAnnotation::info(cvcf)$CT %in% c("3to3", "5to3"), "+", "-")
 
 			mcistartoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 1) %na% 0
 			mciendoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 2) %na% 0
@@ -414,18 +414,18 @@ setMethod("breakpointRanges", "VCF",
 		if (!unpartneredBreakends) {
 			cvcf <- vcf[rows,]
 
-			if (is.null(info(cvcf)$CHR2) || any(is.na(info(cvcf)$CHR2))) {
+			if (is.null(VariantAnnotation::info(cvcf)$CHR2) || any(is.na(VariantAnnotation::info(cvcf)$CHR2))) {
 				stop(paste("TIGRA variants missing CHR2:", paste(names(cgr)[is.na(VariantAnnotation::info(cvcf)$CHR2)], collapse=", ")))
 			}
-			width(cgr) <- 1
+			BiocGenerics::width(cgr) <- 1
 			mategr <- cgr
 			# Hack so we can add new seqlevels if required
-			seqlevels(mategr) <- unique(c(seqlevels(mategr), info(cvcf)$CHR2))
-			seqnames(mategr)[seq(1, length(mategr))] <- info(cvcf)$CHR2
-			ranges(mategr) <- IRanges::IRanges(start=info(cvcf)$END, width=1)
+			GenomeInfoDb::seqlevels(mategr) <- unique(c(GenomeInfoDb::seqlevels(mategr), VariantAnnotation::info(cvcf)$CHR2))
+			GenomeInfoDb::seqnames(mategr)[seq(1, length(mategr))] <- VariantAnnotation::info(cvcf)$CHR2
+			IRanges::ranges(mategr) <- IRanges::IRanges(start=VariantAnnotation::info(cvcf)$END, width=1)
 			# no direction information is reported
-			strand(cgr) <- "*"
-			strand(mategr) <- "*"
+			BiocGenerics::strand(cgr) <- "*"
+			BiocGenerics::strand(mategr) <- "*"
 
 			mcistartoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 1) %na% 0
 			mciendoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 2) %na% 0
