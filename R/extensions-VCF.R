@@ -1,7 +1,7 @@
 .dispatchPerAllele_CollapsedVCF <- function(FUN, x, singleAltOnly) {
-    alt <- alt(x)
-    flat <- BiocGenerics::unlist(alt, use.names=FALSE)
-    res <- FUN(rep(ref(x), S4Vectors::elementNROWS(alt(x))), flat)
+    als <- VariantAnnotation::alt(x)
+    flat <- BiocGenerics::unlist(als, use.names=FALSE)
+    res <- FUN(rep(VariantAnnotation::ref(x), S4Vectors::elementNROWS(VariantAnnotation::alt(x))), flat)
     lst <- relist(res, alt)
     if (singleAltOnly)
         all(lst) & S4Vectors::elementNROWS(lst) == 1
@@ -9,9 +9,9 @@
         any(lst)
 }
 .dispatchPerAllele_ExpandedVCF <- function(FUN, x) {
-    alt <- alt(x)
-    flat <- BiocGenerics::unlist(alt, use.names=FALSE)
-    res <- FUN(rep(ref(x), S4Vectors::elementNROWS(alt(x))), flat)
+    als <- VariantAnnotation::alt(x)
+    flat <- BiocGenerics::unlist(als, use.names=FALSE)
+    res <- FUN(rep(VariantAnnotation::ref(x), S4Vectors::elementNROWS(VariantAnnotation::alt(x))), flat)
     res
 }
 
@@ -72,18 +72,18 @@ setMethod("isStructural", "ExpandedVCF",
 #'
 .svLen <- function(vcf) {
 	assertthat::assert_that(.hasSingleAllelePerRecord(vcf))
-    r <- ref(vcf)
-    a <- elementExtract(alt(vcf))
+    r <- VariantAnnotation::ref(vcf)
+    a <- elementExtract(VariantAnnotation::alt(vcf))
     result <- ifelse(!isStructural(vcf), 0,
-		elementExtract(info(vcf)$SVLEN) %na%
-		(elementExtract(info(vcf)$END) - start(rowRanges(vcf))) %na%
+		elementExtract(VariantAnnotation::info(vcf)$SVLEN) %na%
+		(elementExtract(VariantAnnotation::info(vcf)$END) - start(IRanges::rowRanges(vcf))) %na%
 		(ifelse(isSymbolic(vcf), NA_integer_, IRanges::nchar(a) - IRanges::nchar(r))))
     return(result)
 }
 
 .hasSingleAllelePerRecord <- function(vcf) {
 	assertthat::assert_that(is(vcf, "VCF"))
-    all(S4Vectors::elementNROWS(alt(vcf)) == 1)
+    all(S4Vectors::elementNROWS(VariantAnnotation::alt(vcf)) == 1)
 }
 setMethod("isStructural", "VCF",
 		  function(x, ...)
@@ -136,8 +136,8 @@ setMethod("breakpointRanges", "VCF",
 	assertthat::assert_that(assertthat::noNA(row.names(vcf)))
 	assertthat::assert_that(!any(duplicated(row.names(vcf))))
 	gr <- rowRanges(vcf)
-	gr$REF <- as.character(ref(vcf))
-	gr$ALT <- as.character(elementExtract(alt(vcf), 1))
+	gr$REF <- as.character(VariantAnnotation::ref(vcf))
+	gr$ALT <- as.character(elementExtract(VariantAnnotation::alt(vcf), 1))
 	gr$vcfId <- names(vcf)
 	gr$partner <- rep(NA_character_, length(gr))
 	gr$svtype <- elementExtract(info(vcf)$SVTYPE) %na%
@@ -156,19 +156,19 @@ setMethod("breakpointRanges", "VCF",
 		mcols(gr)[[col]] <- info(vcf)[[col]]
 	}
 	if (!is.null(info(vcf)$HOMSEQ)) {
-		seq <- elementExtract(info(vcf)$HOMSEQ, 1)
+		seq <- elementExtract(VariantAnnotation::info(vcf)$HOMSEQ, 1)
 		gr$ciwidth <- ifelse(is.na(seq), gr$ciwidth, nchar(seq))
 	}
 	if (!is.null(info(vcf)$HOMLEN)) {
-		gr$ciwidth <- elementExtract(info(vcf)$HOMLEN, 1) %na% gr$ciwidth
+		gr$ciwidth <- elementExtract(VariantAnnotation::info(vcf)$HOMLEN, 1) %na% gr$ciwidth
 	}
 	# have not yet factored in imprecise variant calling into ciwidth - just microhomology
 	gr$HOMLEN <- gr$ciwidth
 
-	if (!is.null(info(vcf)$CIPOS)) {
+	if (!is.null(VariantAnnotation::info(vcf)$CIPOS)) {
 		.expectMetadataInfo(vcf, "CIPOS", 2, header.Type.Integer)
-		cistartoffset <- elementExtract(info(vcf)$CIPOS, 1)
-		ciendoffset <- elementExtract(info(vcf)$CIPOS, 2)
+		cistartoffset <- elementExtract(VariantAnnotation::info(vcf)$CIPOS, 1)
+		ciendoffset <- elementExtract(VariantAnnotation::info(vcf)$CIPOS, 2)
 		ciwidth <- ciendoffset - cistartoffset
 		gr$cistartoffset <- cistartoffset %na% gr$cistartoffset
 		gr$ciwidth <- ciwidth %na% gr$ciwidth
@@ -191,7 +191,7 @@ setMethod("breakpointRanges", "VCF",
 			strand(cgr) <- "+"
 			mategr <- cgr
 			strand(mategr) <- "-"
-			ranges(mategr) <- IRanges(start=start(cgr) + nchar(cgr$REF) - commonPrefixLength + 1, width=1)
+			ranges(mategr) <- IRanges::IRanges(start=BiocGenerics::start(cgr) + nchar(cgr$REF) - commonPrefixLength + 1, width=1)
 
 			names(mategr) <- paste0(names(cgr), suffix, 2)
 			names(cgr) <- paste0(names(cgr), suffix, 1)
@@ -217,21 +217,21 @@ setMethod("breakpointRanges", "VCF",
 			strand(cgr) <- "+"
 			width(cgr) <- 1
 			cgr$insLen <- ifelse(ins, abs(cgr$svLen), 0)
-			if (!is.null(info(cvcf)$NTLEN)) {
+			if (!is.null(VariantAnnotation::info(cvcf)$NTLEN)) {
 				#pindel RPL
-				cgr$insLen <- elementExtract(info(cvcf)$NTLEN) %na% cgr$insLen
+				cgr$insLen <- elementExtract(VariantAnnotation::info(cvcf)$NTLEN) %na% cgr$insLen
 			}
 			mategr <- cgr
 			strand(mategr) <- "-"
 			# use end, then fall back to calculating from length
-			end <- elementExtract(info(cvcf)$END, 1) %na% (start(cgr) + ifelse(ins, 0, abs(cgr$svLen)))
+			end <- elementExtract(VariantAnnotation::info(cvcf)$END, 1) %na% (BiocGenerics::start(cgr) + ifelse(ins, 0, abs(cgr$svLen)))
 			if (any(is.na(end))) {
 				stop(paste("Variant of undefined length: ", paste(names(cgr)[is.na(end),], collapse=", ")))
 			}
-			ranges(mategr) <- IRanges(start=end + ifelse(dup, 0, 1), width=1)
+			ranges(mategr) <- IRanges(BiocGenerics::start=end + ifelse(dup, 0, 1), width=1)
 
-			cistartoffset <- elementExtract(info(cvcf)$CIEND, 1)
-			ciendoffset <- elementExtract(info(cvcf)$CIEND, 2)
+			cistartoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 1)
+			ciendoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 2)
 			ciwidth <- ciendoffset - cistartoffset
 			mategr$cistartoffset <- cistartoffset %na% mategr$cistartoffset
 			mategr$ciwidth <- ciwidth %na% mategr$ciwidth
@@ -255,17 +255,17 @@ setMethod("breakpointRanges", "VCF",
 		gr$processed[rows] <- TRUE
 		if (!unpartneredBreakends) {
 			width(cgr1) <- 1
-			end <- elementExtract(info(vcf)$END[rows], 1) %na% (start(cgr1) + abs(cgr1$svLen) - 1)
+			end <- elementExtract(VariantAnnotation::info(vcf)$END[rows], 1) %na% (BiocGenerics::start(cgr1) + abs(cgr1$svLen) - 1)
 			if (any(is.na(end))) {
 				stop(paste("Variant of undefined length: ", paste(names(cgr1)[is.na(end),], collapse=", ")))
 			}
 			hasPlusBreakend <- rep(TRUE, length(cgr1))
 			hasMinusBreakend <- rep(TRUE, length(cgr1))
-			if (!is.null(info(vcf)$INV3)) {
-				hasMinusBreakend <- !info(vcf)$INV3[rows]
+			if (!is.null(VariantAnnotation::info(vcf)$INV3)) {
+				hasMinusBreakend <- !VariantAnnotation::info(vcf)$INV3[rows]
 			}
 			if (!is.null(info(vcf)$INV5)) {
-				hasPlusBreakend <- !info(vcf)$INV5[rows]
+				hasPlusBreakend <- !VariantAnnotation::info(vcf)$INV5[rows]
 			}
 
 			cgr2 <- cgr1
@@ -277,9 +277,9 @@ setMethod("breakpointRanges", "VCF",
 			cgr3 <- cgr1
 			cgr4 <- cgr2
 
-			ranges(cgr2) <- IRanges(start=end + 1, width=1)
-			ranges(cgr3) <- IRanges(start=start(cgr1) - 1, width=1)
-			ranges(cgr4) <- IRanges(start=end, width=1)
+			ranges(cgr2) <- IRanges::IRanges(start=end + 1, width=1)
+			ranges(cgr3) <- IRanges::IRanges(start=start(cgr1) - 1, width=1)
+			ranges(cgr4) <- IRanges::IRanges(start=end, width=1)
 			strand(cgr1) <- "-"
 			strand(cgr2) <- "-"
 			strand(cgr3) <- "+"
@@ -316,8 +316,8 @@ setMethod("breakpointRanges", "VCF",
 			strand(cgr) <- ifelse(preBases == "", "-", "+")
 
 			cgr$partner <- NA_character_
-			if (!is.null(info(cvcf)$PARID)) {
-				cgr$partner <- elementExtract(info(cvcf)$PARID, 1)
+			if (!is.null(VariantAnnotation::info(cvcf)$PARID)) {
+				cgr$partner <- elementExtract(VariantAnnotation::info(cvcf)$PARID, 1)
 			}
 			if (!is.null(info(cvcf)$MATEID) & any(is.na(cgr$partner))) {
 				multimates <- S4Vectors::elementNROWS(info(cvcf)$MATEID) > 1 & is.na(cgr$partner)
@@ -374,24 +374,24 @@ setMethod("breakpointRanges", "VCF",
 		if (!unpartneredBreakends) {
 			cvcf <- vcf[rows,]
 
-			if (is.null(info(cvcf)$CHR2) || any(is.na(info(cvcf)$CHR2))) {
-				stop(paste("Delly variants missing CHR2:", paste(names(cgr)[is.na(info(cvcf)$CHR2)], collapse=", ")))
+			if (is.null(VariantAnnotation::info(cvcf)$CHR2) || any(is.na(VariantAnnotation::info(cvcf)$CHR2))) {
+				stop(paste("Delly variants missing CHR2:", paste(names(cgr)[is.na(VariantAnnotation::info(cvcf)$CHR2)], collapse=", ")))
 			}
-			if (is.null(info(cvcf)$CT) || any(is.na(info(cvcf)$CT))) {
-				stop(paste("Delly variants missing CT:", paste(names(cgr)[is.na(info(cvcf)$CT)], collapse=", ")))
+			if (is.null(VariantAnnotation::info(cvcf)$CT) || any(is.na(VariantAnnotation::info(cvcf)$CT))) {
+				stop(paste("Delly variants missing CT:", paste(names(cgr)[is.na(VariantAnnotation::info(cvcf)$CT)], collapse=", ")))
 			}
-			cgr$insLen <- info(cvcf)$INSLEN %na% 0 # Delly no longer writes INSLEN to all TRA records
+			cgr$insLen <- VariantAnnotation::info(cvcf)$INSLEN %na% 0 # Delly no longer writes INSLEN to all TRA records
 			width(cgr) <- 1
 			mategr <- cgr
 			# Hack so we can add new seqlevels if required
-			seqlevels(mategr) <- unique(c(seqlevels(mategr), info(cvcf)$CHR2))
-			seqnames(mategr)[seq(1, length(mategr))] <- info(cvcf)$CHR2
-			ranges(mategr) <- IRanges(start=info(cvcf)$END, width=1)
-			strand(cgr) <- ifelse(info(cvcf)$CT %in% c("3to3", "3to5"), "+", "-")
-			strand(mategr) <- ifelse(info(cvcf)$CT %in% c("3to3", "5to3"), "+", "-")
+			seqlevels(mategr) <- unique(c(seqlevels(mategr), VariantAnnotation::info(cvcf)$CHR2))
+			seqnames(mategr)[seq(1, length(mategr))] <- VariantAnnotation::info(cvcf)$CHR2
+			ranges(mategr) <- IRanges::IRanges(start=VariantAnnotation::info(cvcf)$END, width=1)
+			strand(cgr) <- ifelse(VariantAnnotation::info(cvcf)$CT %in% c("3to3", "3to5"), "+", "-")
+			strand(mategr) <- ifelse(VariantAnnotation::info(cvcf)$CT %in% c("3to3", "5to3"), "+", "-")
 
-			mcistartoffset <- elementExtract(info(cvcf)$CIEND, 1) %na% 0
-			mciendoffset <- elementExtract(info(cvcf)$CIEND, 2) %na% 0
+			mcistartoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 1) %na% 0
+			mciendoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 2) %na% 0
 			mciwidth <- mciendoffset - mcistartoffset
 			mategr$cistartoffset <- mcistartoffset
 			mategr$ciwidth <- mciwidth
@@ -415,20 +415,20 @@ setMethod("breakpointRanges", "VCF",
 			cvcf <- vcf[rows,]
 
 			if (is.null(info(cvcf)$CHR2) || any(is.na(info(cvcf)$CHR2))) {
-				stop(paste("TIGRA variants missing CHR2:", paste(names(cgr)[is.na(info(cvcf)$CHR2)], collapse=", ")))
+				stop(paste("TIGRA variants missing CHR2:", paste(names(cgr)[is.na(VariantAnnotation::info(cvcf)$CHR2)], collapse=", ")))
 			}
 			width(cgr) <- 1
 			mategr <- cgr
 			# Hack so we can add new seqlevels if required
 			seqlevels(mategr) <- unique(c(seqlevels(mategr), info(cvcf)$CHR2))
 			seqnames(mategr)[seq(1, length(mategr))] <- info(cvcf)$CHR2
-			ranges(mategr) <- IRanges(start=info(cvcf)$END, width=1)
+			ranges(mategr) <- IRanges::IRanges(start=info(cvcf)$END, width=1)
 			# no direction information is reported
 			strand(cgr) <- "*"
 			strand(mategr) <- "*"
 
-			mcistartoffset <- elementExtract(info(cvcf)$CIEND, 1) %na% 0
-			mciendoffset <- elementExtract(info(cvcf)$CIEND, 2) %na% 0
+			mcistartoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 1) %na% 0
+			mciendoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 2) %na% 0
 			mciwidth <- mciendoffset - mcistartoffset
 			mategr$cistartoffset <- mcistartoffset
 			mategr$ciwidth <- mciwidth
@@ -447,7 +447,7 @@ setMethod("breakpointRanges", "VCF",
 	}
 	# incorporate microhomology and confidence intervals
 	if (!nominalPosition) {
-		ranges(outgr) <- IRanges(start=start(outgr) + outgr$cistartoffset, width=outgr$ciwidth + 1, names=names(outgr))
+		ranges(outgr) <- IRanges::IRanges(start=start(outgr) + outgr$cistartoffset, width=outgr$ciwidth + 1, names=names(outgr))
 	}
 	outgr$processed <- NULL
 	outgr$cistartoffset <- NULL
@@ -493,7 +493,7 @@ setMethod("breakendRanges", "VCF",
 }
 
 .hasMetadataInfo <- function(vcf, field) {
-	return(field %in% row.names(info(header(vcf))))
+	return(field %in% row.names(VariantAnnotation::info(header(vcf))))
 }
 .expectMetadataInfo <- function(vcf, field, number, type) {
 	assertthat::assert_that(.hasMetadataInfo(vcf, field))
