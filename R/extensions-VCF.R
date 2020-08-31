@@ -76,7 +76,7 @@ setMethod("isStructural", "ExpandedVCF",
     a <- elementExtract(VariantAnnotation::alt(vcf))
     result <- ifelse(!isStructural(vcf), 0,
 		elementExtract(VariantAnnotation::info(vcf)$SVLEN) %na%
-		(elementExtract(VariantAnnotation::info(vcf)$END) - start(IRanges::rowRanges(vcf))) %na%
+		(elementExtract(VariantAnnotation::info(vcf)$END) - start(SummarizedExperiment::rowRanges(vcf))) %na%
 		(ifelse(isSymbolic(vcf), NA_integer_, IRanges::nchar(a) - IRanges::nchar(r))))
     return(result)
 }
@@ -135,7 +135,7 @@ setMethod("breakpointRanges", "VCF",
 	assertthat::assert_that(!is.null(row.names(vcf)))
 	assertthat::assert_that(assertthat::noNA(row.names(vcf)))
 	assertthat::assert_that(!any(duplicated(row.names(vcf))))
-	gr <- rowRanges(vcf)
+	gr <- SummarizedExperiment::rowRanges(vcf)
 	gr$REF <- as.character(VariantAnnotation::ref(vcf))
 	gr$ALT <- as.character(elementExtract(VariantAnnotation::alt(vcf), 1))
 	gr$vcfId <- names(vcf)
@@ -153,9 +153,9 @@ setMethod("breakpointRanges", "VCF",
 	gr$ciwidth <- rep(0, length(gr))
 
 	for (col in info_columns) {
-		mcols(gr)[[col]] <- info(vcf)[[col]]
+		mcols(gr)[[col]] <- VariantAnnotation::info(vcf)[[col]]
 	}
-	if (!is.null(info(vcf)$HOMSEQ)) {
+	if (!is.null(VariantAnnotation::info(vcf)$HOMSEQ)) {
 		seq <- elementExtract(VariantAnnotation::info(vcf)$HOMSEQ, 1)
 		gr$ciwidth <- ifelse(is.na(seq), gr$ciwidth, nchar(seq))
 	}
@@ -184,7 +184,7 @@ setMethod("breakpointRanges", "VCF",
 		if (!unpartneredBreakends) {
 			commonPrefixLength <- pairwiseLCPrefix(cgr$REF, cgr$ALT, ignore.case=TRUE)
 			cgr$svLen <- nchar(cgr$ALT) - nchar(cgr$REF)
-			cgr$insSeq <- subseq(cgr$ALT, start=commonPrefixLength + 1)
+			cgr$insSeq <- XVector::subseq(cgr$ALT, start=commonPrefixLength + 1)
 			cgr$insLen <- nchar(cgr$insSeq)
 			start(cgr) <- start(cgr) - 1 + commonPrefixLength
 			width(cgr) <- 1
@@ -214,21 +214,21 @@ setMethod("breakpointRanges", "VCF",
 			del <- cgr$svtype == "DEL"
 			ins <- cgr$svtype == "INS"
 
-			strand(cgr) <- "+"
-			width(cgr) <- 1
+			BiocGenerics::strand(cgr) <- "+"
+			BiocGenerics::width(cgr) <- 1
 			cgr$insLen <- ifelse(ins, abs(cgr$svLen), 0)
 			if (!is.null(VariantAnnotation::info(cvcf)$NTLEN)) {
 				#pindel RPL
 				cgr$insLen <- elementExtract(VariantAnnotation::info(cvcf)$NTLEN) %na% cgr$insLen
 			}
 			mategr <- cgr
-			strand(mategr) <- "-"
+			BiocGenerics::strand(mategr) <- "-"
 			# use end, then fall back to calculating from length
 			end <- elementExtract(VariantAnnotation::info(cvcf)$END, 1) %na% (BiocGenerics::start(cgr) + ifelse(ins, 0, abs(cgr$svLen)))
 			if (any(is.na(end))) {
 				stop(paste("Variant of undefined length: ", paste(names(cgr)[is.na(end),], collapse=", ")))
 			}
-			ranges(mategr) <- IRanges::IRanges(start=end + ifelse(dup, 0, 1), width=1)
+			ranges(mategr) <- IRanges::IRanges(start=BiocGenerics::end + ifelse(dup, 0, 1), width=1)
 
 			cistartoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 1)
 			ciendoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 2)
@@ -237,8 +237,8 @@ setMethod("breakpointRanges", "VCF",
 			mategr$ciwidth <- ciwidth %na% mategr$ciwidth
 
 
-			strand(cgr)[dup] <- "-"
-			strand(mategr)[dup] <- "+"
+			BiocGenerics::strand(cgr)[dup] <- "-"
+			BiocGenerics::strand(mategr)[dup] <- "+"
 
 			names(mategr) <- paste0(names(cgr), suffix, 2)
 			names(cgr) <- paste0(names(cgr), suffix, 1)
@@ -269,17 +269,17 @@ setMethod("breakpointRanges", "VCF",
 			}
 
 			cgr2 <- cgr1
-			cistartoffset <- elementExtract(info(vcf)$CIEND[rows], 1)
-			ciendoffset <- elementExtract(info(vcf)$CIEND[rows], 2)
+			cistartoffset <- elementExtract(VariantAnnotation::info(vcf)$CIEND[rows], 1)
+			ciendoffset <- elementExtract(VariantAnnotation::info(vcf)$CIEND[rows], 2)
 			ciwidth <- ciendoffset - cistartoffset
 			cgr2$cistartoffset <- cistartoffset %na% cgr2$cistartoffset
 			cgr2$ciwidth <- ciwidth %na% cgr2$ciwidth
 			cgr3 <- cgr1
 			cgr4 <- cgr2
 
-			ranges(cgr2) <- IRanges::IRanges(start=end + 1, width=1)
-			ranges(cgr3) <- IRanges::IRanges(start=start(cgr1) - 1, width=1)
-			ranges(cgr4) <- IRanges::IRanges(start=end, width=1)
+			ranges(cgr2) <- IRanges::IRanges(start=BiocGenerics::end + 1, width=1)
+			ranges(cgr3) <- IRanges::IRanges(start=BiocGenerics::start(cgr1) - 1, width=1)
+			ranges(cgr4) <- IRanges::IRanges(start=BiocGenerics::end, width=1)
 			strand(cgr1) <- "-"
 			strand(cgr2) <- "-"
 			strand(cgr3) <- "+"
@@ -319,7 +319,7 @@ setMethod("breakpointRanges", "VCF",
 			if (!is.null(VariantAnnotation::info(cvcf)$PARID)) {
 				cgr$partner <- elementExtract(VariantAnnotation::info(cvcf)$PARID, 1)
 			}
-			if (!is.null(info(cvcf)$MATEID) & any(is.na(cgr$partner))) {
+			if (!is.null(VariantAnnotation::info(cvcf)$MATEID) & any(is.na(cgr$partner))) {
 				multimates <- S4Vectors::elementNROWS(info(cvcf)$MATEID) > 1 & is.na(cgr$partner)
 				cgr$partner <- ifelse(is.na(cgr$partner), elementExtract(info(cvcf)$MATEID, 1), cgr$partner)
 				if (any(multimates)) {
@@ -336,11 +336,11 @@ setMethod("breakpointRanges", "VCF",
 				cgr <- cgr[!toRemove,]
 			}
 			mategr <- cgr[cgr$partner,]
-			cgr$svLen <- ifelse(seqnames(cgr)==seqnames(mategr), abs(start(cgr) - start(mategr)) - 1, NA_integer_)
+			cgr$svLen <- ifelse(GenomeInfoDb::seqnames(cgr)==GenomeInfoDb::seqnames(mategr), abs(BiocGenerics::start(cgr) - BiocGenerics::start(mategr)) - 1, NA_integer_)
 			# make deletion-like events have a -ve svLen
-			cgr$svLen <- ifelse(strand(cgr) != strand(mategr) &
-					((start(cgr) < start(mategr) & strand(cgr) == "+") |
-					 (start(cgr) > start(mategr) & strand(cgr) == "-")),
+			cgr$svLen <- ifelse(BiocGenerics::strand(cgr) != BiocGenerics::strand(mategr) &
+					((BiocGenerics::start(cgr) < BiocGenerics::start(mategr) & BiocGenerics::strand(cgr) == "+") |
+					 (BiocGenerics::start(cgr) > BiocGenerics::start(mategr) & BiocGenerics::strand(cgr) == "-")),
 				-cgr$svLen, cgr$svLen)
 			cgr$svLen <- cgr$svLen + cgr$insLen
 			outgr <- c(outgr, cgr)
@@ -355,7 +355,7 @@ setMethod("breakpointRanges", "VCF",
 		gr$processed[rows] <- TRUE
 		if (unpartneredBreakends) {
 			cvcf <- vcf[rows,]
-			strand(cgr) <- ifelse(cgr$ALT == "", "*", ifelse(stringr::str_sub(cgr$ALT, 1, 1) == ".", "-", "+"))
+			BiocGenerics::strand(cgr) <- ifelse(cgr$ALT == "", "*", ifelse(stringr::str_sub(cgr$ALT, 1, 1) == ".", "-", "+"))
 			# trim anchoring base and breakend symbol
 			cgr$insSeq <- stringr::str_sub(cgr$ALT, 2, stringr::str_length(cgr$ALT) - 1)
 			cgr$insLen <- stringr::str_length(cgr$insSeq)
