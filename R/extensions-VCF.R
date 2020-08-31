@@ -140,7 +140,7 @@ setMethod("breakpointRanges", "VCF",
 	gr$ALT <- as.character(elementExtract(VariantAnnotation::alt(vcf), 1))
 	gr$vcfId <- names(vcf)
 	gr$partner <- rep(NA_character_, length(gr))
-	gr$svtype <- elementExtract(info(vcf)$SVTYPE) %na%
+	gr$svtype <- elementExtract(VariantAnnotation::info(vcf)$SVTYPE) %na%
 		# hack ensure that [,2] exists even for zero record vcfs
 		(stringr::str_match(c("HACK", gr$ALT), "<(.*)>")[,2][-1]) %na%
 		rep(NA_character_, length(gr))
@@ -159,7 +159,7 @@ setMethod("breakpointRanges", "VCF",
 		seq <- elementExtract(VariantAnnotation::info(vcf)$HOMSEQ, 1)
 		gr$ciwidth <- ifelse(is.na(seq), gr$ciwidth, nchar(seq))
 	}
-	if (!is.null(info(vcf)$HOMLEN)) {
+	if (!is.null(VariantAnnotation::info(vcf)$HOMLEN)) {
 		gr$ciwidth <- elementExtract(VariantAnnotation::info(vcf)$HOMLEN, 1) %na% gr$ciwidth
 	}
 	# have not yet factored in imprecise variant calling into ciwidth - just microhomology
@@ -264,7 +264,7 @@ setMethod("breakpointRanges", "VCF",
 			if (!is.null(VariantAnnotation::info(vcf)$INV3)) {
 				hasMinusBreakend <- !VariantAnnotation::info(vcf)$INV3[rows]
 			}
-			if (!is.null(info(vcf)$INV5)) {
+			if (!is.null(VariantAnnotation::info(vcf)$INV5)) {
 				hasPlusBreakend <- !VariantAnnotation::info(vcf)$INV5[rows]
 			}
 
@@ -320,7 +320,7 @@ setMethod("breakpointRanges", "VCF",
 				cgr$partner <- elementExtract(VariantAnnotation::info(cvcf)$PARID, 1)
 			}
 			if (!is.null(VariantAnnotation::info(cvcf)$MATEID) & any(is.na(cgr$partner))) {
-				multimates <- S4Vectors::elementNROWS(info(cvcf)$MATEID) > 1 & is.na(cgr$partner)
+				multimates <- S4Vectors::elementNROWS(VariantAnnotation::info(cvcf)$MATEID) > 1 & is.na(cgr$partner)
 				cgr$partner <- ifelse(is.na(cgr$partner), elementExtract(info(cvcf)$MATEID, 1), cgr$partner)
 				if (any(multimates)) {
 					warning(paste("Ignoring additional mate breakends for variants", names(cgr)[multimates]))
@@ -497,7 +497,7 @@ setMethod("breakendRanges", "VCF",
 }
 .expectMetadataInfo <- function(vcf, field, number, type) {
 	assertthat::assert_that(.hasMetadataInfo(vcf, field))
-	row <- info(header(vcf))[field,]
+	row <- VariantAnnotation::info(header(vcf))[field,]
 	assertthat::assert_that(number == row$Number)
 	assertthat::assert_that(type == row$Type)
 }
