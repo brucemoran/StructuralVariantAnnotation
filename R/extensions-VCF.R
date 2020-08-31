@@ -228,7 +228,7 @@ setMethod("breakpointRanges", "VCF",
 			if (any(is.na(end))) {
 				stop(paste("Variant of undefined length: ", paste(names(cgr)[is.na(end),], collapse=", ")))
 			}
-			ranges(mategr) <- IRanges(BiocGenerics::start=end + ifelse(dup, 0, 1), width=1)
+			ranges(mategr) <- IRanges::IRanges(start=end + ifelse(dup, 0, 1), width=1)
 
 			cistartoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 1)
 			ciendoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 2)
