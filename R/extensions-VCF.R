@@ -2,7 +2,7 @@
     als <- VariantAnnotation::alt(x)
     flat <- BiocGenerics::unlist(als, use.names=FALSE)
     res <- FUN(rep(VariantAnnotation::ref(x), S4Vectors::elementNROWS(VariantAnnotation::alt(x))), flat)
-    lst <- relist(res, alt)
+    lst <- BiocGenerics::relist(res, als)
     if (singleAltOnly)
         all(lst) & S4Vectors::elementNROWS(lst) == 1
     else
