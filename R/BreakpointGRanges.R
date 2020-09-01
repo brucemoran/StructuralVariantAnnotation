@@ -142,6 +142,128 @@ pairs2breakpointgr <- function(pairs, placeholderName="bedpe") {
 	return(gr)
 }
 
+#' Converts a breakpoint GRanges object to a Pairs object
+#' @param bpgr breakpoint GRanges object
+#' @param writeQualAsScore write the breakpoint GRanges QUAL field as the score
+#' fields for compatibility with BEDPE rtracklayer export
+#' @param writeName write the breakpoint GRanges QUAL field as the score
+#' fields for compatibility with BEDPE rtracklayer export
+#' @param bedpeName function that returns the name to use for the breakpoint.
+#' Defaults to the sourceId, name column, or row names (in that priority) of
+#' the first breakend of each pair.
+#' @param firstInPair function that returns TRUE for breakends that are considered
+#' the first in the pair, and FALSE for the second in pair breakend. By default,
+#' the first in the pair is the breakend with the lower ordinal in the breakpoint
+#' GRanges object.
+#' @examples
+#' vcf.file <- system.file("extdata", "gridss.vcf", package = "StructuralVariantAnnotation")
+#' bpgr <- breakpointRanges(VariantAnnotation::readVcf(vcf.file))
+#' pairgr <- breakpointgr2pairs(bpgr)
+#' rtracklayer::export(pairgr, con="example.bedpe")
+#' @return Pairs GRanges object suitable for export to BEDPE by rtracklayer
+#' @rdname pairs2breakpointgr
+#' @export
+breakpointgr2pairs <- function(
+  bpgr,
+  writeQualAsScore=TRUE,
+  writeName=TRUE,
+  bedpeName = NULL,
+  firstInPair = NULL) {
+  .assertValidBreakpointGRanges(bpgr, "Cannot convert breakpoint GRanges to Pairs: ", allowSingleBreakends=FALSE)
+  
+  if (is.null(bedpeName)) {
+    bedpeName = function(gr) { (gr$sourceId %null% gr$name) %null% names(gr) }
+  }
+  if (is.null(firstInPair)) {
+    firstInPair = function(gr) { seq_along(gr) < match(gr$partner, names(gr)) }
+  }
+  isFirst = firstInPair(bpgr)
+  pairgr = S4Vectors::Pairs(bpgr[isFirst], partner(bpgr)[isFirst])
+  if (writeName) {
+    S4Vectors::mcols(pairgr)$name = bedpeName(S4Vectors::first(pairgr))
+  }
+  if (writeQualAsScore) {
+    S4Vectors::mcols(pairgr)$score = S4Vectors::first(pairgr)$QUAL
+  }
+  return(pairgr)
+}
+.assertValidBreakpointGRanges <- function(bpgr, friendlyErrorMessage="", allowSingleBreakends=TRUE) {
+  if (is.null(names(bpgr))) {
+    stop(paste0(friendlyErrorMessage, "Breakpoint GRanges require names"))
+  }
+  if (any(is.na(names(bpgr)))) {
+    stop(paste0(friendlyErrorMessage, "Breakpoint GRanges names cannot be NA"))
+  }
+  if (any(duplicated(names(bpgr)))) {
+    stop(paste0(friendlyErrorMessage, "Breakpoint GRanges names cannot duplicated"))
+  }
+  if (!allowSingleBreakends & any(is.na(bpgr$partner))) {
+    stop(paste0(friendlyErrorMessage, "Breakpoint GRanges contains single breakends"))
+  }
+  if (any(duplicated(bpgr$partner) & !is.na(bpgr$partner))) {
+    stop(paste0(friendlyErrorMessage,
+                "Multiple breakends with the sample partner identified. ",
+                "Breakends with multiple partners not currently supported by Breakpoint GRanges."))
+  }
+  else if (!all(is.na(bpgr$partner) | (bpgr$partner %in% names(bpgr) & names(bpgr) %in% bpgr$partner))) {
+    stop(paste0(friendlyErrorMessage,
+                "Unpartnered breakpoint found. ",
+                "All breakpoints must contain a partner in the breakpoint GRanges."))
+  }
+}
+#' Converts a BEDPE Pairs containing pairs of GRanges loaded using to a breakpoint GRanges object.
+#' @details
+#' Breakpoint-level column names will override breakend-level column names.
+#' @param pairs a Pairs object consisting of two parallel genomic loci.
+#' @param placeholderName prefix to use to ensure each entry has a unique ID.
+#' @param firstSuffix first in pair name suffix to ensure breakend name uniqueness
+#' @param secondSuffix second in pair name suffix to ensure breakend name uniqueness
+#' @param nameField Fallback field for row names if the Pairs object does not contain any names.
+#' BEDPE files loaded using rtracklayer use the "name" field.
+#' @param renameScoreToQUAL renames the 'score' column to 'QUAL'.
+#' Performing this rename results in a consistent variant quality score column
+#' name for variant loaded from BEDPE and VCF.
+#' @examples
+#' bedpe.file <- system.file("extdata", "gridss.bedpe", package = "StructuralVariantAnnotation")
+#' bedpe.pairs <- rtracklayer::import(bedpe.file)
+#' bedpe.bpgr <- pairs2breakpointgr(bedpe.pairs)
+#' @return Breakpoint GRanges object.
+#' @export
+pairs2breakpointgr <- function(
+		pairs,
+		placeholderName="bedpe",
+		firstSuffix="_1", secondSuffix="_2",
+		nameField="name",
+		renameScoreToQUAL=TRUE) {
+	n <- names(pairs)
+	if (is.null(n)) {
+		# BEDPE uses the "name" field
+		if (nameField %in% names(S4Vectors::mcols(pairs))) {
+			n <- S4Vectors::mcols(pairs)[[nameField]]
+			mcols(pairs)$sourceId <- n
+		} else {
+			n <- rep(NA_character_, length(pairs))
+		}
+	}
+	# ensure row names are unique
+	n <- ifelse(is.na(n) | n == "" | n =="." | duplicated(n), paste0(placeholderName, seq_along(n)), n)
+	#
+	gr <- c(S4Vectors::first(pairs), S4Vectors::second(pairs))
+	names(gr) <- c(paste0(n, firstSuffix), paste0(n, secondSuffix))
+	gr$partner <- c(paste0(n, secondSuffix), paste0(n, firstSuffix))
+	for (col in names(S4Vectors::mcols(pairs))) {
+		if (col %in% nameField) {
+			# drop columns we have processed
+		} else {
+			S4Vectors::mcols(gr)[[col]] <- S4Vectors::mcols(pairs)[[col]]
+		}
+	}
+	if (renameScoreToQUAL) {
+		names(mcols(gr))[which(names(mcols(gr)) == "score")] <- "QUAL"
+		}
+	return(gr)
+}
+
 #' Extracts the breakpoint sequence.
 #'
 #' @details
