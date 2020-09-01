@@ -447,7 +447,7 @@ setMethod("breakpointRanges", "VCF",
 	}
 	# incorporate microhomology and confidence intervals
 	if (!nominalPosition) {
-		ranges(outgr) <- IRanges::IRanges(start=start(outgr) + outgr$cistartoffset, width=outgr$ciwidth + 1, names=names(outgr))
+		IRanges::ranges(outgr) <- IRanges::IRanges(start=BiocGenerics::start(outgr) + outgr$cistartoffset, width=outgr$ciwidth + 1, names=names(outgr))
 	}
 	outgr$processed <- NULL
 	outgr$cistartoffset <- NULL
