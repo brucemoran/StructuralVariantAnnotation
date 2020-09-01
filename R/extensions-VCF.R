@@ -321,7 +321,7 @@ setMethod("breakpointRanges", "VCF",
 			}
 			if (!is.null(VariantAnnotation::info(cvcf)$MATEID) & any(is.na(cgr$partner))) {
 				multimates <- S4Vectors::elementNROWS(VariantAnnotation::info(cvcf)$MATEID) > 1 & is.na(cgr$partner)
-				cgr$partner <- ifelse(is.na(cgr$partner), elementExtract(info(cvcf)$MATEID, 1), cgr$partner)
+				cgr$partner <- ifelse(is.na(cgr$partner), elementExtract(VariantAnnotation::info(cvcf)$MATEID, 1), cgr$partner)
 				if (any(multimates)) {
 					warning(paste("Ignoring additional mate breakends for variants", names(cgr)[multimates]))
 				}
