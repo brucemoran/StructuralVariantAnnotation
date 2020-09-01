@@ -493,11 +493,11 @@ setMethod("breakendRanges", "VCF",
 }
 
 .hasMetadataInfo <- function(vcf, field) {
-	return(field %in% row.names(VariantAnnotation::info(header(vcf))))
+	return(field %in% row.names(VariantAnnotation::info(VariantAnnotation::header(vcf))))
 }
 .expectMetadataInfo <- function(vcf, field, number, type) {
 	assertthat::assert_that(.hasMetadataInfo(vcf, field))
-	row <- VariantAnnotation::info(header(vcf))[field,]
+	row <- VariantAnnotation::info(VariantAnnotation::header(vcf))[field,]
 	assertthat::assert_that(number == row$Number)
 	assertthat::assert_that(type == row$Type)
 }
