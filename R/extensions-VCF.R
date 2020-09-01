@@ -186,12 +186,12 @@ setMethod("breakpointRanges", "VCF",
 			cgr$svLen <- nchar(cgr$ALT) - nchar(cgr$REF)
 			cgr$insSeq <- XVector::subseq(cgr$ALT, start=commonPrefixLength + 1)
 			cgr$insLen <- nchar(cgr$insSeq)
-			start(cgr) <- start(cgr) - 1 + commonPrefixLength
-			width(cgr) <- 1
-			strand(cgr) <- "+"
+			BiocGenerics::start(cgr) <- start(cgr) - 1 + commonPrefixLength
+			BiocGenerics::width(cgr) <- 1
+			BiocGenerics::strand(cgr) <- "+"
 			mategr <- cgr
-			strand(mategr) <- "-"
-			ranges(mategr) <- IRanges::IRanges(start=BiocGenerics::start(cgr) + nchar(cgr$REF) - commonPrefixLength + 1, width=1)
+			BiocGenerics::strand(mategr) <- "-"
+			IRanges::ranges(mategr) <- IRanges::IRanges(start=BiocGenerics::start(cgr) + nchar(cgr$REF) - commonPrefixLength + 1, width=1)
 
 			names(mategr) <- paste0(names(cgr), suffix, 2)
 			names(cgr) <- paste0(names(cgr), suffix, 1)
@@ -228,7 +228,7 @@ setMethod("breakpointRanges", "VCF",
 			if (any(is.na(end))) {
 				stop(paste("Variant of undefined length: ", paste(names(cgr)[is.na(end),], collapse=", ")))
 			}
-			ranges(mategr) <- IRanges::IRanges(start=BiocGenerics::end + ifelse(dup, 0, 1), width=1)
+			IRanges::ranges(mategr) <- IRanges::IRanges(start=BiocGenerics::end + ifelse(dup, 0, 1), width=1)
 
 			cistartoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 1)
 			ciendoffset <- elementExtract(VariantAnnotation::info(cvcf)$CIEND, 2)
@@ -277,13 +277,13 @@ setMethod("breakpointRanges", "VCF",
 			cgr3 <- cgr1
 			cgr4 <- cgr2
 
-			ranges(cgr2) <- IRanges::IRanges(start=BiocGenerics::end + 1, width=1)
-			ranges(cgr3) <- IRanges::IRanges(start=BiocGenerics::start(cgr1) - 1, width=1)
-			ranges(cgr4) <- IRanges::IRanges(start=BiocGenerics::end, width=1)
-			strand(cgr1) <- "-"
-			strand(cgr2) <- "-"
-			strand(cgr3) <- "+"
-			strand(cgr4) <- "+"
+			IRanges::ranges(cgr2) <- IRanges::IRanges(start=BiocGenerics::end + 1, width=1)
+			IRanges::ranges(cgr3) <- IRanges::IRanges(start=BiocGenerics::start(cgr1) - 1, width=1)
+			IRanges::ranges(cgr4) <- IRanges::IRanges(start=BiocGenerics::end, width=1)
+			BiocGenerics::strand(cgr1) <- "-"
+			BiocGenerics::strandstrand(cgr2) <- "-"
+			BiocGenerics::strandstrand(cgr3) <- "+"
+			BiocGenerics::strandstrand(cgr4) <- "+"
 
 			names(cgr4) <- paste0(names(cgr1), suffix, 4)
 			names(cgr3) <- paste0(names(cgr1), suffix, 3)
@@ -313,7 +313,7 @@ setMethod("breakpointRanges", "VCF",
 			bracket <- bndMatches[,3]
 			remoteLocation <- bndMatches[,4]
 			postBases <- bndMatches[,6]
-			strand(cgr) <- ifelse(preBases == "", "-", "+")
+			BiocGenerics::strandstrand(cgr) <- ifelse(preBases == "", "-", "+")
 
 			cgr$partner <- NA_character_
 			if (!is.null(VariantAnnotation::info(cvcf)$PARID)) {
